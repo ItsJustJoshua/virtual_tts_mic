@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="virtual_tts_mic.vcxproj" Id="ee6e4baa-5817-40e6-8229-012ba7bf5d2c" />
+</Solution>
