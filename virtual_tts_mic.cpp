@@ -20,20 +20,21 @@ void log(const std::string& message)
 #endif
 }
 
-
 // get the virtual cable input token so we can make the voice speak through it
-ISpObjectToken* GetCableInputToken() {
+ISpObjectToken* GetCableInputToken() 
+{
+	// create a category for audio output tokens
 	ISpObjectTokenCategory* pCategory = nullptr;
 	CoCreateInstance(CLSID_SpObjectTokenCategory, nullptr, CLSCTX_ALL, IID_ISpObjectTokenCategory, (void**)&pCategory);
 	pCategory->SetId(SPCAT_AUDIOOUT, FALSE);
 
+	// enumerate the tokens in the category
 	IEnumSpObjectTokens* pEnum = nullptr;
 	pCategory->EnumTokens(nullptr, nullptr, &pEnum);
 	pCategory->Release();
 
 	ISpObjectToken* pToken = nullptr;
 	ISpObjectToken* found = nullptr;
-
 
 	// loop through until we find the virtual cable input token
 	while (pEnum->Next(1, &pToken, nullptr) == S_OK) {
@@ -44,10 +45,11 @@ ISpObjectToken* GetCableInputToken() {
 			found = pToken;
 			found->AddRef();
 		}
-
+		// free the description string and release the token
 		if (desc) CoTaskMemFree(desc);
 		pToken->Release();
 	}
+	// release the enumerator
 	pEnum->Release();
 
 	return found;
@@ -57,8 +59,10 @@ int start_up()
 {
 	log("Setting up voice!");
 
+	// initialize COM library
 	CoInitialize(nullptr);
 
+	// create the SAPI voice
 	pVoice = nullptr;
 	HRESULT hr = CoCreateInstance(CLSID_SpVoice, nullptr, CLSCTX_ALL, IID_ISpVoice, (void**)&pVoice);
 	if (FAILED(hr)) {
@@ -70,6 +74,7 @@ int start_up()
 
 	log("Setting up voice to use the virtual microphone!");
 
+	// get the virtual cable input token and set it as the output for the voice
 	ISpObjectToken* pCable = GetCableInputToken();
 	if (pCable) {
 		pVoice->SetOutput(pCable, FALSE);
@@ -83,35 +88,57 @@ int start_up()
 	return 1;
 }
 
-void main_loop()
+bool main_loop()
 {
 	std::cout << "Waiting for input!" << std::endl;
+
+	// create a string to hold the input from stdin
 	std::string input;
-	std::getline(std::cin, input); // get input from stdin
 
+	// get input from stdin
+	std::getline(std::cin, input);
+
+	// log input for debugging purposes
 	log("Input received: " + input);
+	if (input == "exit") {
+		return true;
+	}
 
-	std::wstring wline(input.begin(), input.end()); // convert the input into needed format
+	// convert the input into needed format
+	std::wstring wline(input.begin(), input.end()); 
 
-	pVoice->Speak(wline.c_str(), SPF_DEFAULT, nullptr); // make it speak the input (will speak it through the virtual microphone)
+	// make it speak the input (will speak it through the virtual microphone)
+	pVoice->Speak(wline.c_str(), SPF_DEFAULT, nullptr);
+	return false;
 }
 
+void cleanup()
+{
+	// clean up the voice and COM library
+	if (pVoice) {
+		pVoice->Release();
+		pVoice = nullptr;
+	}
 
+	CoUninitialize();
+}
 
 int main()
 {
 	log("Starting virtual TTS microphone");
 
 	// if can create everything needed then move onto main loop if not then exit with error code 1
-	if (start_up() == 0)
+	if (start_up() == 0)	
 	{
 		log("Failed to start up virtual TTS microphone");
 		return 1;
 	}
 
-	while (true)
+	bool exit = false;
+	while (!exit)
 	{
-		main_loop();
+		exit = main_loop();
 	}
 
+	cleanup();
 }
