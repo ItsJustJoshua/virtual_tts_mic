@@ -90,7 +90,7 @@ int start_up()
 
 bool main_loop()
 {
-	std::cout << "Waiting for input!" << std::endl;
+	std::cout << "Waiting for input! Type 'exit' to quit." << std::endl;
 
 	// create a string to hold the input from stdin
 	std::string input;
